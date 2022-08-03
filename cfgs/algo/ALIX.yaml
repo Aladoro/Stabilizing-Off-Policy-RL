@@ -1,0 +1,65 @@
+agent_name: ALIX
+# task settings
+frame_stack: 3
+action_repeat: 2
+discount: 0.99
+# train settings
+num_seed_frames: 4000
+# replay buffer
+replay_buffer_size: 1000000
+nstep: 3
+batch_size: 256
+# agent
+lr: 1e-4
+feature_dim: 50
+save_checkpoints: true
+checkpoint_every_frames: 1500000
+
+agent:
+  _target_: drqv2.DrQV2Agent
+  encoder:
+    _target_: analysis_modules.AllFeatTiedRegularizedEncoder
+    obs_shape: ${agent.obs_shape}
+    aug:
+      _target_: analysis_layers.ParameterizedReg
+      aug:
+        _target_: analysis_layers.LocalSignalMixing
+        pad: 2
+        fixed_batch: true
+      parameter_init: 0.5
+      param_grad_fn: 'alix_param_grad'
+      param_grad_fn_args: [3,0.535,1e-20]
+  actor:
+    _target_: drqv2.Actor
+    encoder: ${agent.encoder}
+    action_shape: ${agent.action_shape}
+    feature_dim: ${agent.feature_dim}
+    hidden_dim: ${agent.hidden_dim}
+  critic:
+    _target_: drqv2.Critic
+    encoder: ${agent.encoder}
+    action_shape: ${agent.action_shape}
+    feature_dim: ${agent.feature_dim}
+    hidden_dim: ${agent.hidden_dim}
+  obs_shape: ???
+  action_shape: ???
+  device: ${device}
+  lr: ${lr}
+  critic_target_tau: 0.01
+  update_every_steps: 2
+  use_tb: ${use_tb}
+  num_expl_steps: 2000
+  hidden_dim: 1024
+  feature_dim: ${feature_dim}
+  stddev_schedule: ${stddev_schedule}
+  stddev_clip: 0.3
+  encoder_lr: ${lr}
+  actor_lr: ${lr}
+  critic_lr: ${lr}
+  aug:
+    _target_: drqv2.NoShiftAug
+  encoder_optimizer_builder:
+    _target_: analysis_optimizers.custom_parameterized_aug_optimizer_builder
+    encoder_lr: ${agent.encoder_lr}
+    lr: 2e-3
+    betas: [0.5, 0.999]
